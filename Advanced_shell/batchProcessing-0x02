@@ -7,24 +7,44 @@ mkdir -p "$OUTPUT_DIR"
 # List of Pokémon to fetch
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Loop through each Pokémon
-for POKEMON in "${POKEMON_LIST[@]}"; do
-    echo "Fetching data for $POKEMON..."
+# Maximum number of retries
+MAX_RETRIES=3
+# Delay between retries (seconds)
+RETRY_DELAY=2
 
-    # Make API request and save to file
-    FILE_PATH="$OUTPUT_DIR/$POKEMON.json"
-    HTTP_RESPONSE=$(curl -s -w "%{http_code}" -o "$FILE_PATH" "https://pokeapi.co/api/v2/pokemon/$POKEMON")
-    HTTP_STATUS="${HTTP_RESPONSE: -3}"
+# Function to fetch Pokémon data with retry logic
+fetch_pokemon() {
+    local POKEMON="$1"
+    local ATTEMPT=1
+    local SUCCESS=0
+    local FILE_PATH="$OUTPUT_DIR/$POKEMON.json"
 
-    # Check if request was successful
-    if [ "$HTTP_STATUS" -eq 200 ]; then
-        echo "Saved data to $FILE_PATH ✅"
-    else
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to fetch $POKEMON (Status $HTTP_STATUS)" >> errors.txt
+    while [ $ATTEMPT -le $MAX_RETRIES ]; do
+        echo "Fetching data for $POKEMON (Attempt $ATTEMPT)..."
+        HTTP_RESPONSE=$(curl -s -w "%{http_code}" -o "$FILE_PATH" "https://pokeapi.co/api/v2/pokemon/$POKEMON")
+        HTTP_STATUS="${HTTP_RESPONSE: -3}"
+
+        if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "Saved data to $FILE_PATH ✅"
+            SUCCESS=1
+            break
+        else
+            echo "Attempt $ATTEMPT failed for $POKEMON (Status $HTTP_STATUS)"
+            ((ATTEMPT++))
+            sleep $RETRY_DELAY
+        fi
+    done
+
+    if [ $SUCCESS -ne 1 ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to fetch $POKEMON after $MAX_RETRIES attempts" >> errors.txt
         echo "Failed to fetch $POKEMON ❌"
         [ -f "$FILE_PATH" ] && rm "$FILE_PATH"
     fi
+}
 
+# Loop through each Pokémon
+for POKEMON in "${POKEMON_LIST[@]}"; do
+    fetch_pokemon "$POKEMON"
     # Delay to avoid rate-limiting
     sleep 1
 done
