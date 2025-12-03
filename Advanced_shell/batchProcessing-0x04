@@ -1,18 +1,13 @@
 #!/bin/bash
 
-# Directory to save Pokémon JSON files
 OUTPUT_DIR="pokemon_data"
 mkdir -p "$OUTPUT_DIR"
 
-# List of Pokémon to fetch
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Maximum number of retries per Pokémon
 MAX_RETRIES=3
-# Delay between retries
 RETRY_DELAY=2
 
-# Function to fetch Pokémon data with retry logic
 fetch_pokemon() {
     local POKEMON="$1"
     local ATTEMPT=1
@@ -21,6 +16,7 @@ fetch_pokemon() {
 
     while [ $ATTEMPT -le $MAX_RETRIES ]; do
         echo "Fetching $POKEMON (Attempt $ATTEMPT)..."
+
         HTTP_RESPONSE=$(curl -s -w "%{http_code}" -o "$FILE_PATH" "https://pokeapi.co/api/v2/pokemon/$POKEMON")
         HTTP_STATUS="${HTTP_RESPONSE: -3}"
 
@@ -42,12 +38,20 @@ fetch_pokemon() {
     fi
 }
 
-# Loop through each Pokémon and run fetch_pokemon in background
+# Run all fetches in parallel
 for POKEMON in "${POKEMON_LIST[@]}"; do
     fetch_pokemon "$POKEMON" &
 done
 
-# Wait for all background processes to complete
+# Show jobs running in background
+echo "Active background jobs:"
+jobs
+
+# Example of killing a background job (uncomment to use)
+# echo "Killing all background jobs..."
+# kill $(jobs -p)
+
+# Wait for all background processes to finish
 wait
 
 echo "All Pokémon data fetches complete."
