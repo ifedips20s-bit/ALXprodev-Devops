@@ -1,19 +1,20 @@
 #!/bin/bash
 
-# File containing API response
 JSON_FILE="data.json"
 
 # Extract Pokémon name
-NAME=$(jq -r '.name' "$JSON_FILE" | sed 's/.*/\u&/')  # Capitalize first letter
+name=$(jq -r '.name' "$JSON_FILE" | sed 's/.*/\u&/')
 
-# Extract height (API gives height in decimeters, convert to meters)
-HEIGHT=$(jq -r '.height' "$JSON_FILE" | awk '{printf "%.1f", $1/10}')
+# Extract height (decimeters → meters)
+height=$(jq -r '.height' "$JSON_FILE")
+formatted_height=$(echo "$height" | awk '{printf "%.1f", $1/10}')
 
-# Extract weight (API gives weight in hectograms, convert to kg)
-WEIGHT=$(jq -r '.weight' "$JSON_FILE" | awk '{printf "%d", $1/10}')
+# Extract weight (hectograms → kilograms)
+weight=$(jq -r '.weight' "$JSON_FILE")
+formatted_weight=$(echo "$weight" | awk '{printf "%.1f", $1/10}')
 
-# Extract type(s) - if multiple types, join with comma
-TYPE=$(jq -r '.types | sort_by(.slot) | .[].type.name' "$JSON_FILE" | sed 's/.*/\u&/' | paste -sd "," -)
+# Extract type(s)
+type=$(jq -r '.types | sort_by(.slot) | .[].type.name' "$JSON_FILE" | sed 's/.*/\u&/' | paste -sd "," -)
 
-# Print formatted output
-echo "$NAME is of type $TYPE, weighs ${WEIGHT}kg, and is ${HEIGHT}m tall."
+# Final output
+echo "$name is of type $type, weighs ${formatted_weight}kg, and is ${formatted_height}m tall."
